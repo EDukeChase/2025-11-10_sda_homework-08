@@ -1,0 +1,19 @@
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  TeX: {
+    extensions: ["boldsymbol.js"],
+    Macros: {
+      forall: "{\\oldforall\\,}",
+      exists: "{\\oldexists\\,}",
+      mid: "{\\!\\oldmid\\!}",
+      nmid: "{\\mathrel{\\!\\not\\!\\mid\\!}}"
+    }
+  }
+});
+// Need to define the old commands first if they are used
+MathJax.Hub.Register.StartupHook("TeX Jax Ready", function () {
+  MathJax.InputJax.TeX.prefilterHooks.Add(function (data) {
+    data.math = '\\let\\oldforall\\forall \\let\\oldexists\\exists \\let\\oldmid\\mid ' + data.math;
+  });
+});
+</script>

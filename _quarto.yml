@@ -1,0 +1,19 @@
+project:
+  type: default
+
+execute:
+  freeze: auto
+
+format:
+  html:
+    theme: cosmo
+    code-fold: true
+    embed-resources: true
+    css: style.css
+    include-in-head: mathjax-config.html
+    filters:
+      - filter.lua
+    code-links:
+      repo
+
+lang: en
