@@ -1,5 +1,5 @@
 ---
-title: "Homework-#: Title"
+title: "Homework-08: Geostatistics Homework (Prediction)"
 author: "E. Duke Chase"
 date: today
 ---
@@ -9,10 +9,6 @@ date: today
 
 library(here)
 source(here::here("R", "setup.R"))
-
-# Set key directory paths
-data_dir <- here::here("data")
-output_dir <- here::here("output")
 ```
 
 The `cow.rda` file contains a data frame with 200 spatial observations observed throughout the state of Colorado.  The data frame includes `easting` and `northing` coordinates (UTM, scaled by 1000 meters) and Tungsten measurements (`W`) at each site (mg/kg). Read in the data as a data frame from the file.  
@@ -30,15 +26,6 @@ Create `geocow`, a `geodata` object from the **geoR** package.
 Also run the following code.
 
 ```{r}
-#| p_0-setup
-
-# Load data
-load(here("data", "cow.rda"))
-
-# Create `sf` and `geodata` versions of the data
-cow_sf <- sf::st_as_sf(cow, coords = c("easting", "northing"))
-geocow <- as.geodata(cbind(cow$easting, cow$northing, cow$W))
-
 set.seed(1)
 poly_sf <- sf::st_polygon(x = list(cbind(
   c(152, 152, 753, 753, 152),
@@ -49,6 +36,19 @@ grid_sf <- sf::st_sample(poly_sf, size = 100,
 ```
 
 **Solution**
+
+```{r}
+#| label: p_0-setup
+#| code-fold: show
+
+# Load data
+load(here("data", "cow.rda"))
+
+# Create `sf` and `geodata` versions of the data
+cow_sf <- sf::st_as_sf(cow, coords = c("easting", "northing"))
+geocow <- as.geodata(cbind(cow$easting, cow$northing, cow$W))
+```
+
 
 # Problem 1 (Using geoR)
 
@@ -66,6 +66,123 @@ Note: starting values make a HUGE difference for the anisotropic models, so you 
 Which model is the best choice?
 
 **Solution**
+
+```{r}
+#| label: p_1
+#| warning: false
+#| error: false
+
+# plot(variog(geocow))
+# plot(variog4(geocow))
+
+# Preliminary guesses
+psill_est <- 0.01
+range_est <- 200
+nugget_est <- 1
+
+# Define models
+## Isotropic spherical
+lfit_isosph <- cache_computation({
+  likfit(
+    geocow,
+    ini.cov.pars = c(psill_est, range_est),
+    nugget = nugget_est,
+    cov.model = "spherical",
+    lik.method = "REML"
+  )
+}, cache_filename = "lfit_isosph.rds", parallel = FALSE)
+
+
+## Geometric anisotropic spherical
+lfit_anisph <- cache_computation({
+  likfit(geocow,
+     ini.cov.pars = c(psill_est, range_est),
+     nugget = nugget_est,
+     cov.model = "spherical",
+     lik.method = "REML",
+     psiA = 0,
+     fix.psiA = FALSE,
+     psiR = 1,
+     fix.psiR = FALSE)
+}, cache_filename = "lfit_anisph.rds", parallel = FALSE)
+
+
+## Isotropic exponential
+lfit_isoexp <- cache_computation({
+  likfit(geocow,
+         ini.cov.pars = c(psill_est, range_est),
+         nugget = nugget_est,
+         cov.model = "exponential",
+         lik.method = "REML")
+}, cache_filename = "lfit_isoexp.rds", parallel = FALSE)
+
+
+## Geometric anisotropic exponential
+lfit_aniexp <- cache_computation({
+  likfit(geocow,
+                         ini.cov.pars = c(psill_est, range_est),
+                         nugget = nugget_est,
+                         cov.model = "exponential",
+                         lik.method = "REML",
+                         psiA = 0,
+                         fix.psiA = FALSE,
+                         psiR = 1,
+                         fix.psiR = FALSE)
+}, cache_filename = "lfit_aniexp.rds", parallel = FALSE)
+
+
+# Extract values for table
+## Partial sills
+psill_isosph <- lfit_isosph$cov.pars[1]
+psill_anisph <- lfit_anisph$cov.pars[1]
+psill_isoexp <- lfit_isoexp$cov.pars[1]
+psill_aniexp <- lfit_aniexp$cov.pars[1]
+
+## Ranges
+range_isosph <- lfit_isosph$cov.pars[2]
+range_anisph <- lfit_anisph$cov.pars[2]
+range_isoexp <- lfit_isoexp$cov.pars[2]
+range_aniexp <- lfit_aniexp$cov.pars[2]
+
+## Nuggets
+nugget_isosph <- lfit_isosph$nugget
+nugget_anisph <- lfit_anisph$nugget
+nugget_isoexp <- lfit_isoexp$nugget
+nugget_aniexp <- lfit_aniexp$nugget
+
+
+## Major axis (deg)
+axis_anisph <- lfit_anisph$aniso.pars[1] * 180 / pi
+axis_aniexp <- lfit_aniexp$aniso.pars[1] * 180 / pi
+
+
+## Anisotropy ratio
+anirat_anisph <- 1 / lfit_anisph$aniso.pars[2]
+anirat_aniexp <- 1 / lfit_aniexp$aniso.pars[2]
+
+
+## AIC
+aic_isosph <- lfit_isosph$AIC
+aic_anisph <- lfit_anisph$AIC
+aic_isoexp <- lfit_isoexp$AIC
+aic_aniexp <- lfit_aniexp$AIC
+
+# Build the table
+p1_table <- tibble(
+  Model = c("Isotropic Spherical", "Anisotropic Spherical",
+            "Isotropic Exponential", "Anisotropic Exponential"),
+  "Partial Sill" = c(psill_isosph, psill_anisph, psill_isoexp, psill_aniexp),
+  Range = c(range_isosph, range_anisph, range_isoexp, range_aniexp),
+  Nugget = c(nugget_isosph, nugget_anisph, nugget_isoexp, nugget_aniexp),
+  "Major Axis (deg)" = c(NA, axis_anisph, NA, axis_aniexp),
+  "Anisotropy Ratio" = c(NA, anirat_anisph, NA, anirat_aniexp),
+  AIC = c(aic_isosph, aic_anisph, aic_isoexp, aic_aniexp)
+)
+
+knitr::kable(p1_table, digits = 3) |> 
+  kable_styling(bootstrap_options = c("striped", "condensed"))
+```
+
 
 # Problem 2
 

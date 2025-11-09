@@ -5,6 +5,7 @@ library(here)               # Robust file paths
 library(knitr)              # Used for running R code in Quarto
 library(RColorBrewer)       # Color palettes to enable color-blind friendliness
 library(tidyverse)          # Essential R packages
+library(kableExtra)         # Table styling
 
 # --- Homework specific packages ---
 library(sf)
