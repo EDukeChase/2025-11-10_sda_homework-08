@@ -75,10 +75,10 @@ Which model is the best choice?
 # plot(variog(geocow))
 # plot(variog4(geocow))
 
-# Preliminary guesses
-psill_est <- 0.01
-range_est <- 200
-nugget_est <- 1
+# Preliminary guesses (after a few rounds of trying different values)
+psill_est <- 1.2
+range_est <- 30
+nugget_est <- 0
 
 # Define models
 ## Isotropic spherical
@@ -184,7 +184,7 @@ knitr::kable(p1_table, digits = 3) |>
 ```
 
 ::: {.answer-box}
-  Answer here
+  Based on AIC, the geometric anisotropic exponential model is the best by a fair margin.
 :::
 
 
@@ -326,12 +326,12 @@ Are the predictions for standard and filtered kriging identical for the predicti
 ```{r}
 #| label: p_5
 
-all.equal(ok_3$ph.pred, fok_4$ph.pred)
+all.equal(ok_3$W.pred, fok_4$W.pred)
 ```
 
 
 ::: {.answer-box}
-  The predicted tungsten values are the same for both standard and filtered kriging
+  The predicted tungsten values are the same for both standard and filtered kriging. This is because filtered kriging assumes measurement error, and when interpolating at unobserved points there is no measurement error to account for, so it will give the same results as standard kriging at those unobserved locations.
 :::
 
 
@@ -354,6 +354,11 @@ psf <- rbind(cbind(ok_3, type = "standard"),
 ggplot(psf) + geom_sf(aes(col = W.var)) + facet_wrap(~ type) + ggtitle("kriging variance")
 ```
 
+::: {.answer-box}
+  As expected, the variances for standard kriging are higher than for filtered kriging, since they assume the nugget is microscale error and reflect the uncertainty in predicting the total signal + microscale error, while filtered kriging is lower because it is predicting signal only, and treating the nugget as measurement error.
+:::
+
+
 
 # Problem 7
 
@@ -366,7 +371,8 @@ Use the `summary` function to summarize your results.
 ```{r}
 #| label: p_7
 
-ok_7 <- 
+ok_7 <- predict(gstat_stdkrig_2, newdata = cow_sf)
+summary(ok_7)
 ```
 
 
@@ -378,14 +384,31 @@ Use the `summary` function to summarize your results.
 
 **Solution**
 
+```{r}
+#| label: p_8
+
+fok_8 <- predict(gstat_filtkrig_2, newdata = cow_sf)
+summary(fok_8)
+```
+
+
 # Problem 9
 
 Are the standard and unfiltered kriging predictions the same at the observed data locations? Why?
 
 **Solution**
 
+::: {.answer-box}
+  No, which is to be expected, because standard kriging is an exact interpolator, and will predict exactly the observed values if you try to predict at observed locations. With filtered kriging, it is not an exact interpolator and it will use smoothing to try and account for measurement error at those locations to give error-free predictions.
+:::
+
+
 # Problem 10
 
-What do you notice about the kriging variances for the filtered and unfilted kriging predictions at observed data locations?
+What do you notice about the kriging variances for the filtered and unfiltered kriging predictions at observed data locations?
 
 **Solution**
+
+::: {.answer-box}
+  The variance for standard kriging is essentially zero, with what are likely just some floating point artifacts making the values not be exactly zero. For the filtered kriging the variances at the observed points are all in the range of [0.090, 0.094], which is just a bit less than the nugget value from REML fit from problem 2 that we assigned as the measurement error, which makes sense given that filtered kriging is intended to account for measurement error.
+:::

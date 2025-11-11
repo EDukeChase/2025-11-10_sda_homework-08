@@ -8,6 +8,8 @@ format:
   html:
     theme: cosmo
     code-fold: true
+    toc: true
+    toc-location: right
     embed-resources: true
     css: style.css
     include-in-head: mathjax-config.html
