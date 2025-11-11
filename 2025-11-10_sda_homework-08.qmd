@@ -183,6 +183,11 @@ knitr::kable(p1_table, digits = 3) |>
   kable_styling(bootstrap_options = c("striped", "condensed"))
 ```
 
+::: {.answer-box}
+  Answer here
+:::
+
+
 
 # Problem 2
 
@@ -232,6 +237,54 @@ likfit(geodata = geocow, ini.cov.pars = c(0.5, 10), fix.nugget = FALSE,
 
 **Solution**
 
+```{r}
+#| label: p_2
+#| code-fold: show
+
+# Params from summary
+psill_2 <- 1.158
+a_min_2 <- 3.276
+psiR_2 <- 2
+a_max_2 <- a_min_2 * psiR_2
+nugget_2 <- 0.102
+angle_gstat_2 <- 45
+ratio_gstat_2 <- 1 / psiR_2
+
+# Standard Kriging Model
+vgm_standard_2 <- vgm(
+  psill = psill_2,
+  model = "Exp",
+  range = a_max_2,
+  nugget = nugget_2,
+  anis = c(angle_gstat_2, ratio_gstat_2)
+)
+
+gstat_stdkrig_2 <- gstat(
+  id = "W",
+  formula = W ~ 1,
+  data = cow_sf,
+  model = vgm_standard_2
+)
+
+# Filtered Kriging Model
+vgm_filtered_2 <- vgm(
+  psill = psill_2,
+  model = "Exp",
+  range = a_max_2,
+  Err = nugget_2,
+  anis = c(angle_gstat_2, ratio_gstat_2)
+)
+
+gstat_filtkrig_2 <- gstat(
+  id = "W",
+  formula = W ~ 1,
+  data = cow_sf,
+  model = vgm_filtered_2
+)
+```
+
+
+
 # Problem 3
 
 Perform standard kriging at the locations contained in `grid_sf` using the `gstat` object created in the previous problem.
@@ -239,6 +292,14 @@ Perform standard kriging at the locations contained in `grid_sf` using the `gsta
 Use the `summary` function to summarize your results.
 
 **Solution**
+
+```{r}
+#| label: p_3
+
+ok_3 <- predict(gstat_stdkrig_2, newdata = grid_sf)
+summary(ok_3)
+```
+
 
 # Problem 4
 
@@ -248,17 +309,51 @@ Use the `summary` function to summarize your results.
 
 **Solution**
 
+```{r}
+#| label: p_4
+
+fok_4 <- predict(gstat_filtkrig_2, newdata = grid_sf)
+summary(fok_4)
+```
+
+
 # Problem 5
 
 Are the predictions for standard and filtered kriging identical for the predictions above? Why?
 
 **Solution**
 
+```{r}
+#| label: p_5
+
+all.equal(ok_3$ph.pred, fok_4$ph.pred)
+```
+
+
+::: {.answer-box}
+  The predicted tungsten values are the same for both standard and filtered kriging
+:::
+
+
 # Problem 6
 
 Create side-by-side plots of the kriging variances from Problems 3 and 4 with a common color scale. Which variances are higher?
 
 **Solution**
+
+```{r}
+#| label: p_6
+
+# ggplot(ok_3) + geom_sf(aes(col = W.var))
+# ggplot(fok_4) + geom_sf(aes(col = W.var))
+
+# Create data frame to create plots side by side
+psf <- rbind(cbind(ok_3, type = "standard"),
+             cbind(fok_4, type = "filtered"))
+
+ggplot(psf) + geom_sf(aes(col = W.var)) + facet_wrap(~ type) + ggtitle("kriging variance")
+```
+
 
 # Problem 7
 
@@ -267,6 +362,13 @@ Perform standard kriging at the locations contained in `cow_sf` using the `gstat
 Use the `summary` function to summarize your results.
 
 **Solution**
+
+```{r}
+#| label: p_7
+
+ok_7 <- 
+```
+
 
 # Problem 8
 
